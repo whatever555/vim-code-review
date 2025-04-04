@@ -39,13 +39,17 @@ endfunction
 " FUNCTIONS 
 "==============================================================================
 
-:function! s:CodeReview() range
+:function! s:CodeReview(method, ...) range
+  :let l:q = a:1
   :cclose
   :redraw
-  :call s:CallCodeReview()
+  :call s:CallCodeReview(a:method, l:q)
 :endfunction
 
-:function! s:CallCodeReview() range
+:function! s:CallCodeReview(method, ...) range
+  :let l:q = a:1
+  :echo "CodeReview: " . l:q
+  :echo q
   :let l:selectedText = s:get_visual_selection()
   :let l:startLine = s:getStartLineOfSelection()
   :let l:filename = expand('%')
@@ -70,6 +74,9 @@ endfunction
     :let l:modelText = " --model " . (l:model)
   :endif
 
+  
+  let l:methodText = " --method " . a:method
+
 
   :if !empty(l:selectedText) && len(l:selectedText) > 1
     :let l:snippet = 1
@@ -79,7 +86,7 @@ endfunction
     :echo "Checking file. Please wait.. (Ctrl-C to cancel)"
   :endif
 
-  :let l:cmd = "emurph-code-checker " . l:providerText . " --file " . (l:filename) . " " . l:snippetText . " " . l:modelText 
+  :let l:cmd = "emurph-code-checker " . l:methodText . " " . l:providerText . " --file " . (l:filename) . " " . l:snippetText . " " . l:modelText 
 
   :try
     :let l:fixes = system(l:cmd)
@@ -105,4 +112,6 @@ endfunction
   :endif
 :endfunction
 
-:command! -range CodeReview '<,'>  call s:CodeReview()
+:command! -range CodeReview '<,'>  call s:CodeReview('review')
+:command! -range CodeReviewExplain '<,'>  call s:CodeReview('explain')
+:command! -range -nargs=1 CodeReviewAskQuestion '<,'>  call s:CodeReview('question', <q-args>)
