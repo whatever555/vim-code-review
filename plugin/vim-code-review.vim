@@ -90,7 +90,9 @@ endfunction
   :let l:cmd = "emurph-code-checker " . l:methodText . " " . l:providerText . " --file " . (l:filename) . " " . l:snippetText . " " . l:questionText . " " . l:modelText 
 
   :try
-    :let l:fixes = system(l:cmd)
+     :call AsyncSystemCall(['sh', '-c', l:cmd], function('HandleResult'))
+
+
   :catch
     :echo "Error: " . v:exception
   :endtry
@@ -98,7 +100,61 @@ endfunction
   :execute 'normal! y' 
   :exec 'normal! vy'
 
-  :let l:jsonFixes = json_decode(l:fixes)
+:endfunction
+
+
+
+function! AsyncSystemCall(cmd, callback)
+  let l:options = {}
+  let l:return_data = {'stdout': [], 'stderr': []}
+  
+  if has('nvim')
+    " Neovim implementation
+    function! l:options.on_stdout(job_id, data, event) closure
+      if !empty(a:data)
+        let l:return_data.stdout += a:data
+      endif
+    endfunction
+    
+    function! l:options.on_stderr(job_id, data, event) closure
+      if !empty(a:data)
+        let l:return_data.stderr += a:data
+      endif
+    endfunction
+    
+    function! l:options.on_exit(job_id, exit_code, event) closure
+      " Filter out empty lines that Neovim might add
+      call filter(l:return_data.stdout, {idx, val -> !empty(val)})
+      call filter(l:return_data.stderr, {idx, val -> !empty(val)})
+      call a:callback(l:return_data)
+    endfunction
+    
+    let l:job = jobstart(a:cmd, l:options)
+  else
+    " Vim implementation
+    function! l:options.out_cb(channel, message) closure
+      let l:return_data.stdout += [a:message]
+    endfunction
+    
+    function! l:options.err_cb(channel, message) closure
+      let l:return_data.stderr += [a:message]
+    endfunction
+    
+    function! l:options.close_cb(channel) closure
+      call a:callback(l:return_data)
+    endfunction
+    
+    let l:options.mode = 'nl'
+    let l:job = job_start(a:cmd, l:options)
+  endif
+  
+  return l:job
+endfunction
+
+function! HandleResult(result)
+  " echom "STDOUT: " . join(a:result.stdout, "\n")
+  " echom "STDERR: " . join(a:result.stderr, "\n")
+  :let l:jsonFixes = json_decode(a:result.stdout)
   :try 
       :silent! call setqflist(l:jsonFixes, 'r')
   :catch
@@ -111,7 +167,7 @@ endfunction
       :echo "Error opening quickfix window."
     :endtry
   :endif
-:endfunction
+endfunction
 
 :command! -range CodeReview '<,'>  call s:CodeReview('review', '')
 :command! -range CodeReviewExplain '<,'>  call s:CodeReview('explain', '')
