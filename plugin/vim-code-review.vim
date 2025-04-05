@@ -82,9 +82,9 @@ endfunction
   :if !empty(l:selectedText) && len(l:selectedText) > 1
     :let l:snippet = 1
     :let l:snippetText = " --code '" . (l:selectedText) . "' --start " . (l:startLine) . " "
-    :echo "Checking selection. Please wait.. (Ctrl-C to cancel)"
+    :echo "Checking selection. Please wait.."
   :else
-    :echo "Checking file. Please wait.. (Ctrl-C to cancel)"
+    :echo "Checking file. Please wait.."
   :endif
 
   :let l:cmd = "emurph-code-checker " . l:methodText . " " . l:providerText . " --file " . (l:filename) . " " . l:snippetText . " " . l:questionText . " " . l:modelText 
